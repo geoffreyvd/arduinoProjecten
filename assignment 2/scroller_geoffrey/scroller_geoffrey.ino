@@ -273,6 +273,6 @@ void loop ()
   */
   
   // Part 3: scrolling /////////////////////////////////
-  scroll("Geoffrey ", 1);
+  scroll("Geoffrey ", 3);
 }
 
