@@ -6,10 +6,14 @@ const int ledPin =  13;      // the number of the LED pin
 // variables will change:
 int buttonState = 0;         // variable for reading the pushbutton status
 int buttonStateOld = 0;         // variable for reading the pushbutton status
-long countPresses = 0;
-
 byte timesPressedSinceChange = 0;
 byte valuePresses = 0;
+
+int button2State = 0;         // variable for reading the pushbutton status
+int button2StateOld = 0;         // variable for reading the pushbutton status
+byte timesPressedSinceChange2 = 0;
+byte valuePresses2 = 0;
+byte lastPlayer = 0;
 
 // Max7219 pins
 const int dataIn = 9;
@@ -121,7 +125,7 @@ void checkButtonPresses ()
     if(timesPressedSinceChange > 4){
       if(valuePresses - 2){
         digitalWrite(ledPin, HIGH);
-        drawNumber(++countPresses);
+        lastPlayer = 1;
       }
       timesPressedSinceChange = 0;
       valuePresses = 0;
@@ -129,6 +133,32 @@ void checkButtonPresses ()
   } else if(buttonState != HIGH){
     buttonStateOld = LOW;
     timesPressedSinceChange++;
+    // turn LED off:
+    digitalWrite(ledPin, LOW);
+  }
+}
+
+void checkButton2Presses () 
+{
+  // read the state of the pushbutton value:
+  button2State = digitalRead(button2Pin);
+
+  // check if the pushbutton is pressed. If it is, the buttonState is HIGH:
+  if (button2State == HIGH && button2StateOld == LOW) {
+    button2StateOld = HIGH;
+    timesPressedSinceChange2++;
+    valuePresses2++;
+    if(timesPressedSinceChange2 > 4){
+      if(valuePresses2 - 2){
+        digitalWrite(ledPin, HIGH);
+        lastPlayer = 2;
+      }
+      timesPressedSinceChange2 = 0;
+      valuePresses2 = 0;
+    }
+  } else if(button2State != HIGH){
+    button2StateOld = LOW;
+    timesPressedSinceChange2++;
     // turn LED off:
     digitalWrite(ledPin, LOW);
   }
@@ -146,14 +176,21 @@ void setup ()
   pinMode(ledPin, OUTPUT);
   // initialize the pushbutton pin as an input:
   pinMode(buttonPin, INPUT);
+  pinMode(button2Pin, INPUT);
   
   initMax7219();
   drawNumber(0);
+}
+
+void displayPlayerNumber()
+{
+  drawNumber(lastPlayer);
 }
   
 void loop ()
 {
   checkButtonPresses();
-  
+  checkButton2Presses();
+  displayPlayerNumber();    
 }
 

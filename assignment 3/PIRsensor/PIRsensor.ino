@@ -1,15 +1,12 @@
-// constants won't change. They're used here to set pin numbers:
-const int button2Pin = 11;     // the number of the pushbutton pin
-const int buttonPin = 12;     // the number of the pushbutton pin
-const int ledPin =  13;      // the number of the LED pin
+/*
+ * PIR sensor tester
+ */
+ 
+int ledPin = 13;                // choose the pin for the LED
+int inputPin = 10;               // choose the input pin (for PIR sensor)
+int pirState = LOW;             // we start, assuming no motion detected
+int val = 0;                    // variable for reading the pin status
 
-// variables will change:
-int buttonState = 0;         // variable for reading the pushbutton status
-int buttonStateOld = 0;         // variable for reading the pushbutton status
-long countPresses = 0;
-
-byte timesPressedSinceChange = 0;
-byte valuePresses = 0;
 
 // Max7219 pins
 const int dataIn = 9;
@@ -108,52 +105,57 @@ void drawNumber(int number)
   drawImage(image);
 }
 
-void checkButtonPresses () 
-{
-  // read the state of the pushbutton value:
-  buttonState = digitalRead(buttonPin);
-
-  // check if the pushbutton is pressed. If it is, the buttonState is HIGH:
-  if (buttonState == HIGH && buttonStateOld == LOW) {
-    buttonStateOld = HIGH;
-    timesPressedSinceChange++;
-    valuePresses++;
-    if(timesPressedSinceChange > 4){
-      if(valuePresses - 2){
-        digitalWrite(ledPin, HIGH);
-        drawNumber(++countPresses);
-      }
-      timesPressedSinceChange = 0;
-      valuePresses = 0;
-    }
-  } else if(buttonState != HIGH){
-    buttonStateOld = LOW;
-    timesPressedSinceChange++;
-    // turn LED off:
-    digitalWrite(ledPin, LOW);
+void drawError(){
+  byte image[8];                    // Reserve memory for the image
+  for (int i = 0; i < 8; i++)       // The numbers are only 6 rows tall
+  {
+    image[i] = 255;
   }
+  drawImage(image);
 }
 
-/////////////////////////////////////////////////////////////
-// Arduino setup en loop
+void drawEmpty(){
+  byte image[8];                    // Reserve memory for the image
+  for (int i = 0; i < 8; i++)       // The numbers are only 6 rows tall
+  {
+    image[i] = 0;
+  }
+  drawImage(image);
+}
 
-void setup ()
-{
+
+void setup() {
   pinMode(dataIn, OUTPUT);
   pinMode(clock,  OUTPUT);
   pinMode(load,   OUTPUT);
-  // initialize the LED pin as an output:
-  pinMode(ledPin, OUTPUT);
-  // initialize the pushbutton pin as an input:
-  pinMode(buttonPin, INPUT);
   
+  pinMode(ledPin, OUTPUT);      // declare LED as output
+  pinMode(inputPin, INPUT);     // declare sensor as input
+ 
   initMax7219();
-  drawNumber(0);
+  Serial.begin(9600);
 }
-  
-void loop ()
-{
-  checkButtonPresses();
-  
+ 
+void loop(){
+  val = digitalRead(inputPin);  // read input value
+  if (val == HIGH) {            // check if the input is HIGH
+    digitalWrite(ledPin, HIGH);  // turn LED ON
+    if (pirState == LOW) {
+      // we have just turned on
+      Serial.println("Motion detected!");
+      drawError();
+      // We only want to print on the output change, not state
+      pirState = HIGH;
+    }
+  } else {
+      Serial.println("no motion  ");
+    digitalWrite(ledPin, LOW); // turn LED OFF
+    if (pirState == HIGH){
+      // we have just turned of
+      Serial.println("Motion ended!");
+      drawEmpty();
+      // We only want to print on the output change, not state
+      pirState = LOW;
+    }
+  }
 }
-
