@@ -12,6 +12,8 @@ byte timesPressedSinceChange = 0;
 byte valuePresses = 0;
 
 int incomingByte = 0;
+int incomingByte2 = 0;
+byte incomingByteCount = 0;
 
 // Max7219 pins
 const int dataIn = 9;
@@ -157,10 +159,13 @@ void setup ()
 }
 
 void checkSerial ()
-{
-  if(Serial.available()){
-    incomingByte = Serial.read();
-    drawNumber(incomingByte);
+{  
+  if(Serial.available() == 3){
+      if(Serial.read() == 255){
+        incomingByte = Serial.read();
+        incomingByte2 = Serial.read();
+        drawNumber(incomingByte * 255 + incomingByte2);
+      }
   }
 }
     
