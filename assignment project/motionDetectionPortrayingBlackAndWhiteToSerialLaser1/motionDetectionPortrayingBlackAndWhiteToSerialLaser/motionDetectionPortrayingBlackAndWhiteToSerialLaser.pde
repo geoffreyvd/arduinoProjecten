@@ -4,11 +4,35 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 import java.util.Arrays;
 import processing.serial.*;
+import processing.net.*;
 
 // Initialize webcam
 DCapture cap;
 CaptureDeviceControls controls;
 Serial myPort;
+
+//server settings
+final int getLaserStatus = 0;
+final int setLaserStatusOn = 1;
+final int setLaserStatusOff = 2;
+final int getLaserAngle = 3; // returns range between 60-130
+final int getCalibrationMinimum = 4;
+final int getCalibrationMaximum = 5;
+final int resetLaserAngle = 90;
+final int bad = 255;
+final int ack = 254;
+
+int port = 10002;
+boolean myServerRunning = true;
+
+Server myServer;
+
+//settings
+public int treshhold = 90;
+public int maximumAngle = 140;
+public int minimumAngle = 50;
+
+boolean manual = false;
 
 int mapInt(int x, int in_min, int in_max, int out_min, int out_max)
 {
@@ -16,10 +40,6 @@ int mapInt(int x, int in_min, int in_max, int out_min, int out_max)
 }
 
 class DCapture implements java.beans.PropertyChangeListener {
-  //settings
-  public int treshhold = 90;
-  public int maximumAngle = 140;
-  public int minimumAngle = 50;
   
   private DSCapture capture;
   public int width, height;
@@ -126,7 +146,7 @@ class DCapture implements java.beans.PropertyChangeListener {
   
   public void sendMotionColumnToSerial(int index){
     byte angle = (byte) mapInt(index, 0, width, maximumAngle, minimumAngle);
-    println("incoming index: " + index + " outcoming angle" + angle);
+    println("motion detected index: " + index + " outcoming angle" + angle);
     myPort.write(angle);  
   }
 
@@ -161,15 +181,45 @@ void setup()
   //turn on laser
   myPort.write(254);
   
+  myServer = new Server(this, port); // Starts a myServer on port 10002
+  
   //controls.setKSProperty(CaptureDeviceControls.KS_CAMCTRL, CaptureDeviceControls.KS_CAMCTRL_FOCUS, new int[0]);
 }  
 
 void draw()
 {  
-  image(cap.updateImage(), 0, 0, cap.width, cap.height);
+  if(!manual){
+    image(cap.updateImage(), 0, 0, cap.width, cap.height);
+  }
   //try{
   //  TimeUnit.MILLISECONDS.sleep(200);
   //}catch(Exception e){}
+  if (myServerRunning == true)
+  {
+    Client thisClient = myServer.available();
+    if (thisClient != null) {
+      if (thisClient.available() > 0) {
+        int waarde = thisClient.read();
+        println("mesage from: " + thisClient.ip() + " : " + waarde);
+        if(waarde == getCalibrationMinimum){
+          thisClient.write(minimumAngle);       
+        }else if(waarde == getCalibrationMaximum){
+          thisClient.write(maximumAngle);       
+        }else if(waarde >= minimumAngle && waarde <= maximumAngle){
+          //serial write waarde naar laser 
+          myPort.write(waarde);  
+          manual = true;
+          thisClient.write(ack);       
+        }else{
+          thisClient.write(bad);
+        }
+      }
+    }
+  } 
+  else 
+  {
+    println("Server stoppped");
+  }
 }
 
 void exit() {

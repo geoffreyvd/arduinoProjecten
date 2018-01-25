@@ -13,13 +13,23 @@ const char* password = "D7I0RK3ECNQ2";
 
 const char* host = "192.168.0.112";
 
+const byte getLaserStatus = 0;
+const byte setLaserStatusOn = 1;
+const byte setLaserStatusOff = 2;
+const byte getLaserAngle = 3; // returns range between 60-130
+const byte getCalibrationMinimum = 4;
+const byte getCalibrationMaximum = 5;
+const byte resetLaserAngle = 90;
+const byte bad = 255;
+const byte ack = 254;
+
+int maximumLaserAngle = 0;
+int minimumLaserAngle = 0;
+
 void setup() {
   Serial.begin(115200);
   delay(10);
-
-  // We start by connecting to a WiFi network
-
-  Serial.println();
+  
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(ssid);
@@ -41,11 +51,8 @@ void setup() {
   Serial.println(WiFi.localIP());
 }
 
-int value = 0;
-
 void loop() {
   delay(5000);
-  ++value;
 
   Serial.print("connecting to ");
   Serial.println(host);
@@ -60,30 +67,45 @@ void loop() {
   
   // We now create a URI for the request
   String url = "/";
-  
-  Serial.print("Requesting URL: ");
-  Serial.println(url);
+
+  if(maximumLaserAngle == 0){
+    maximumLaserAngle = sendRequest(client, url, getCalibrationMaximum);  
+  }
+  if(minimumLaserAngle == 0){
+    minimumLaserAngle = sendRequest(client, url, getCalibrationMinimum);  
+  Serial.println("maximum: " + (String) maximumLaserAngle + " minimjum : " + (String) minimumLaserAngle);
+  }
+
+  //petentiovalue
+  sendRequest(client, url, 130);
+
+  Serial.println("closing connection");
+}
+
+
+byte sendRequest(WiFiClient client, String url, byte messageByte){
+  Serial.println("Requesting URL: " + url + " , sending message: " + messageByte);
   
   // This will send the request to the server
-  client.print(String("GET /") + " HTTP/1.1\r\n" +
-               "Host: " + host + "\r\n" + 
-               "Connection: close\r\n\r\n");
+  client.write(messageByte);
   unsigned long timeout = millis();
   while (client.available() == 0) {
     if (millis() - timeout > 5000) {
       Serial.println(">>> Client Timeout !");
       client.stop();
-      return;
+      return 0;
     }
   }
   
   // Read all the lines of the reply from server and print them to Serial
   while(client.available()){
-    String line = client.readStringUntil('\r');
-    Serial.print(line);
+    byte answer = client.read();
+    if(answer == ack){
+      Serial.println("Succesfull request");
+    }else if(answer == bad){
+      Serial.println("Bad request");      
+    }
+    return answer;// wahct to goedkeuring
   }
-  
-  Serial.println();
-  Serial.println("closing connection");
 }
 
